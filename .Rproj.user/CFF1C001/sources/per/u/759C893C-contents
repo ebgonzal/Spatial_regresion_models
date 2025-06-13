@@ -1,0 +1,87 @@
+library(sf)
+library(spdep)
+library(GWmodel)
+library(ggplot2)
+library(viridis)
+
+# Convertir a sf y luego a Spatial para GWR y Moran
+escuelas_sf <- st_as_sf(esc_final, coords = c("POINT_X", "POINT_Y"), crs = 4326)
+escuelas_sp <- as(escuelas_sf, "Spatial")
+
+# Vector de nombres de modelos y sus índices
+indices <- c("I_02", "I_36", "I_710", "I_1114", "I_06", "I_714", "I_314")
+
+# Lista para guardar resultados
+resultados_moran <- list()
+modelos_gwr <- list()
+
+for (indice in indices) {
+  
+  cat("\n==============================\n")
+  cat("📌 Índice:", indice, "\n")
+  
+  # Acceder al modelo por nombre
+  modelo <- get(paste0("modelo_", indice))
+  
+  # Obtener residuos
+  res <- residuals(modelo)
+  
+  # Crear pesos espaciales
+  coords <- coordinates(escuelas_sp)
+  vecinos <- knearneigh(coords, k = 5)
+  listw <- nb2listw(knn2nb(vecinos))
+  
+  # Test de Moran
+  moran <- moran.test(res, listw)
+  resultados_moran[[indice]] <- moran
+  
+  cat("Moran’s I:", moran$estimate["Moran I statistic"], "\n")
+  cat("p-valor:", moran$p.value, "\n")
+  
+  # Evaluar si hay autocorrelación significativa
+  if (moran$p.value < 0.05) {
+    cat("⚠️ Autocorrelación detectada. Corriendo GWR...\n")
+    
+    # Armar fórmula del modelo
+    formula_modelo <- formula(modelo)
+    
+    # Calcular el ancho de banda
+    bw <- bw.gwr(formula_modelo,
+                 data = escuelas_sp,
+                 approach = "AICc",
+                 kernel = "bisquare",
+                 adaptive = TRUE)
+    
+    # Ajustar modelo GWR
+    gwr_model <- gwr.basic(formula_modelo,
+                           data = escuelas_sp,
+                           bw = bw,
+                           kernel = "bisquare",
+                           adaptive = TRUE)
+    
+    modelos_gwr[[indice]] <- gwr_model
+    
+    # Exportar coeficientes locales
+    gwr_sf <- st_as_sf(gwr_model$SDF)
+    st_write(gwr_sf, paste0("gwr_coef_", indice, ".shp"), delete_layer = TRUE)
+    
+    # Graficar el primer coeficiente local
+    primer_var <- names(coef(modelo))[-1][1]
+    
+    ggplot() +
+      geom_sf(data = gwr_sf, aes_string(color = primer_var), inherit.aes = FALSE) +
+      scale_color_viridis_c() +
+      labs(title = paste("Coeficiente local de", primer_var, "para", indice)) +
+      theme_minimal()
+    
+  } else {
+    cat("✅ Sin autocorrelación espacial. GWR no necesario.\n")
+  }
+}
+
+
+
+summary(modelo_I_314)$adj.r.squared
+gwr_modelo <- modelos_gwr[["I_314"]]
+gwr_modelo$GW.diagnostic$adjR2
+gwr_modelo$GW.diagnostic$AICc

@@ -1,0 +1,88 @@
+install.packages("sf")
+install.packages("GWmodel")
+install.packages("spatialreg")  # solo si no lo tenés instalado
+library(spatialreg)
+
+library(sf)
+library(GWmodel)
+library(spdep)
+# Leé tu archivo CSV con coordenadas
+escuelas <- escuelas4_2824
+
+# Convertí a objeto espacial sf
+escuelas_sf <- st_as_sf(escuelas, coords = c("POINT_X", "POINT_Y"), crs = 4326)
+
+#Convertí a objeto tipo Spatial (el que necesita GWmodel)
+escuelas_sp <- as(escuelas_sf, "Spatial")
+
+#4. Calcular el ancho de banda óptimo
+bw <- bw.gwr(I_02 ~ Cob_est+ vincNBI+ preciom2+ Dist_CESAC+ pob,
+             data = escuelas_sp,
+             approach = "AICc",
+             kernel = "bisquare",
+             adaptive = TRUE)
+
+
+#Ejecutar el modelo GWR
+gwr_model <- gwr.basic(I_02 ~ Cob_est+ vincNBI+ preciom2+ Dist_CESAC+ pob,
+                       data = escuelas_sp,
+                       bw = bw,
+                       kernel = "bisquare",
+                       adaptive = TRUE)
+
+gwr_model <- gwr.basic(I_02 ~ Cob_est+ preciom2,
+                       data = escuelas_sp,
+                       bw = bw,
+                       kernel = "bisquare",
+                       adaptive = TRUE)
+
+gwr_model$GW.diagnostic$AICc
+
+##Ver resultados
+summary(gwr_model)
+
+# Coeficientes locales para cada variable
+head(gwr_model$SDF@data)
+# Exportá los coeficientes para analizarlos o mapear
+write.csv(gwr_model$SDF@data, "coeficientes_gwr.csv", row.names = FALSE)
+
+st_write(gwr_sf, "coeficientes_gwr.shp", delete_layer = TRUE)
+
+
+
+gwr_model$GW.diagnostic
+summary(glm_model)$adj.r.squared
+gwr_model$GW.diagnostic$adjR2
+
+
+
+
+
+
+library(sf)
+
+# Convertimos a sf
+gwr_sf <- st_as_sf(gwr_model$SDF)
+
+# Vemos qué columnas tiene (coeficientes, predicciones, etc.)
+names(gwr_sf)
+
+ggplot() +
+  geom_sf(data = gwr_sf, aes(color = Cob_est), inherit.aes = FALSE) +
+  scale_color_viridis_c() +
+  labs(title = "Coeficiente local de cobertura médica sobre INTC") +
+  theme_minimal()
+
+##########################################################################
+
+# Crear pesos espaciales
+coords <- coordinates(escuelas_sp)
+vecinos <- knearneigh(coords, k = 5)
+listw <- nb2listw(knn2nb(vecinos))
+
+# Modelo SAR
+sar_model <- lagsarlm(I_02 ~ Cob_est + preciom2, data = escuelas_sp, listw = listw)
+summary(sar_model)
+
+
+

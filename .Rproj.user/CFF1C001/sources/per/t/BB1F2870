@@ -1,0 +1,26 @@
+{
+    "id": "BB1F2870",
+    "path": "~/odonto_intc_soc/Scripts/script_model.R",
+    "project_path": "Scripts/script_model.R",
+    "type": "r_source",
+    "hash": "1395508396",
+    "contents": "",
+    "dirty": false,
+    "created": 1749226237368.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "185,2",
+        "scrollLine": "174"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1749687147,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1749687147458,
+    "read_only": false,
+    "read_only_alternatives": []
+}
