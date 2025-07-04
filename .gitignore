@@ -1,0 +1,12 @@
+# Archivos y carpetas temporales de RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# Archivos de sistema
+*.ini
+
+# Archivos generados
+*.html
+*.pdf
