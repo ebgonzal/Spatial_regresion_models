@@ -1,4 +1,9 @@
-.Rproj.user
-.Rhistory
 .RData
-.Ruserdata
+.Rhistory
+.Rproj.user/
+gwr_report.html
+*.shp
+*.dbf
+*.shx
+*.prj
+
